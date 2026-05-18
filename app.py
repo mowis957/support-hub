@@ -1,75 +1,102 @@
-import streamlit as st
-import sqlite3
+importar streamlit como st
+importar sqlite3
 from datetime import datetime
-import pandas as pd
 
-st.set_page_config(page_title="Support Hub", layout="wide")
+# -----------------------------
+# CONFIG
+# -----------------------------
+st.set_page_config(page_title="Centro de soporte", layout="wide")
 
 conn = sqlite3.connect("support_hub.db", check_same_thread=False)
 c = conn.cursor()
 
+# -----------------------------
+# DB
+# -----------------------------
 c.execute("""
-CREATE TABLE IF NOT EXISTS incidencias (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    titulo TEXT,
-    descripcion TEXT,
-    solucion TEXT,
-    categoria TEXT,
-    prioridad TEXT,
-    estado TEXT,
-    creador TEXT,
-    fecha TEXT
+CREAR TABLA SI NO EXISTE tickets (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+tipo TEXTO,
+TEXTO de prioridad,
+tipología TEXTO,
+descripción TEXTO,
+solución TEXTO,
+número_de_ticket TEXTO,
+producto TEXTO,
+fecha TEXTO
 )
 """)
 conn.commit()
 
-st.title("🚀 Support Hub")
-st.caption("Gestión de incidencias y base de conocimiento")
+# -----------------------------
+# UI
+# -----------------------------
+st.title("🚀 Centro de soporte")
+st.caption("Plataforma corporativa de gestión de tickets")
 
-with st.expander("➕ Nueva incidencia"):
-    with st.form("incidencia"):
-        col1, col2 = st.columns(2)
-        titulo = col1.text_input("Título del problema")
-        categoria = col2.selectbox("Categoría", ["Login", "API", "Red", "Telefonía", "Otro"])
-        descripcion = st.text_area("Descripción")
-        solucion = st.text_area("Solución")
-        col3, col4, col5 = st.columns(3)
-        prioridad = col3.selectbox("Prioridad", ["Baja", "Media", "Alta"])
-        estado = col4.selectbox("Estado", ["Abierto", "En progreso", "Documentado", "Cerrado"])
-        creador = col5.text_input("Creado por")
+# -----------------------------
+# ID DEL TICKET
+# -----------------------------
+def generar_ticket_id(last_id):
+return f"SH-{str(last_id + 1).zfill(4)}"
 
-        if st.form_submit_button("Guardar"):
-            c.execute(
-                "INSERT INTO incidencias (titulo, descripcion, solucion, categoria, prioridad, estado, creador, fecha) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (titulo, descripcion, solucion, categoria, prioridad, estado, creador, str(datetime.now()))
-            )
-            conn.commit()
-            st.success("Guardado correctamente")
+# -----------------------------
+# FORMA
+# -----------------------------
+st.subheader("📌 Nuevo Boleto")
 
-c.execute("SELECT * FROM incidencias ORDER BY id DESC")
-rows = c.fetchall()
+c.execute("SELECT COUNT(*) FROM tickets")
+contador = c.fetchone()[0]
 
-cols = ["id","titulo","descripcion","solucion","categoria","prioridad","estado","creador","fecha"]
-df = pd.DataFrame(rows, columns=cols)
+con st.form("ticket_form"):
+col1, col2 = st.columns(2)
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Total", len(df))
-col2.metric("Abiertas", len(df[df["estado"] == "Abierto"]))
-col3.metric("Documentadas", len(df[df["estado"] == "Documentado"]))
+tipo = col1.selectbox("Tipo de solicitud", ["Incidencia", "Requerimiento"])
+prioridad = col2.selectbox("Prioridad", ["Alta", "Normal", "Baja"])
 
+tipologia = st.selectbox("Tipología", ["Iniciar sesión", "API", "Red", "Sistema", "Otro"])
+
+descripcion = st.text_area("Descripcion")
+solucion = st.text_area("Solución")
+
+producto = st.selectbox("Producto / Plataforma", ["Genesys", "CRM", "Telefonía", "Otro"])
+
+enviar = st.form_submit_button("Crear ticket")
+
+si enviar:
+ticket_id = generar_ticket_id(count)
+
+c.execute("""
+INSERT INTO tickets (tipo, prioridad, tipologia, descripcion, solucion, ticket_num, producto, fecha)
+VALORES (?, ?, ?, ?, ?, ?, ?, ?)
+""", (tipo, prioridad, tipologia, descripcion, solucion, ticket_id, producto, str(datetime.now())))
+
+conn.commit()
+
+st.success(f"Ticket creado: {ticket_id}")
+
+st.rerun()
+
+# -----------------------------
+# PANEL
+# -----------------------------
 st.divider()
-st.subheader("Incidencias")
-if not df.empty:
-    st.dataframe(df[["titulo","categoria","prioridad","estado","creador","fecha"]], use_container_width=True)
+st.subheader("📊 Boletos")
 
-    for _, row in df.iterrows():
-        with st.expander(row["titulo"]):
-            st.write("Descripción:", row["descripcion"])
-            st.write("Solución:", row["solucion"])
-            st.write("Categoría:", row["categoria"])
-            st.write("Prioridad:", row["prioridad"])
-            st.write("Estado:", row["estado"])
-            st.write("Creado por:", row["creador"])
-            st.write("Fecha:", row["fecha"])
-else:
-    st.info("No hay incidencias todavía.")
+c.execute("SELECT * FROM tickets ORDER BY id DESC")
+filas = c.fetchall()
+
+si hay filas:
+st.metric("Total Tickets", len(rows))
+
+para r en filas:
+con st.expander(f"{r[6]} - {r[1]} ({r[2]})"):
+st.write("Tipo:", r[1])
+st.write("Prioridad:", r[2])
+st.write("Tipología:", r[3])
+st.write("Descripción:", r[4])
+st.write("Solución:", r[5])
+st.write("Producto:", r[7])
+st.write("Fecha:", r[8])
+demás:
+st.info ("Todavía no hay entradas.")
